@@ -10,6 +10,7 @@ TerraGravel è un'applicazione mobile "Super App" dedicata verticalmente al cicl
 *   **Mancanza di dati sulla superficie:** Le app attuali non distinguono chiaramente tra "ghiaia battuta veloce" (facile) e "sassaia tecnica" (difficile).
 *   **Frammentazione:** Il ciclista usa un sito per calcolare la pressione gomme, uno per cercare eventi, e un altro per le mappe.
 *   **Ansia da esplorazione:** Paura di finire in sentieri impraticabili o rimanere senza acqua in zone remote.
+*   **Solitudine e incompatibilità:** Difficoltà a trovare compagni di pedalata con livello e spirito compatibili. Uscire da soli in zone isolate può essere pericoloso o noioso.
 
 ## 3. User Personas (Target Audience)
 *   **L'Esploratore (Marco, 35 anni):** Pedala nel weekend, cerca strade bianche panoramiche, evita il traffico. Non gli interessa la media oraria, vuole scoprire posti nuovi e fermarsi a bere una birra.
@@ -34,6 +35,11 @@ TerraGravel è un'applicazione mobile "Super App" dedicata verticalmente al cicl
 ### C. Community & Sicurezza
 1.  **SOS Button:** Pulsante flottante in navigazione. Se premuto per 3 secondi, invia posizione SMS ai contatti di emergenza.
 2.  **Segnalazione Live:** L'utente può segnalare in tempo reale: "Strada chiusa", "Fango eccessivo", "Albero caduto".
+3.  **RideMatch (Il "Tinder per Ciclisti"):** Sistema di matching per trovare compagni di pedalata compatibili.
+    *   *Compatibilità Atletica:* Match basato su velocità media, spirito (turistico vs agonista) e tipo bici (muscle vs e-gravel).
+    *   *Safety First:* Meeting point pubblici suggeriti, sistema di rating nascosto, verifica Strava.
+    *   *Swipe Interface:* Card con foto + 3 badge di compatibilità (Motore, Spirito, Bici).
+    *   *Filtri Intelligenti:* Raggio GPS, livello, genere, disponibilità.
 
 ## 5. Requisiti Non Funzionali (Specifiche Tecniche)
 *   **Piattaforme:** iOS e Android (Sviluppo in Flutter).
@@ -53,6 +59,8 @@ TerraGravel è un'applicazione mobile "Super App" dedicata verticalmente al cicl
 *   Download mappe offline (Regionali).
 *   Sistema di recensione percorsi (Stelline + Tag es. "Sabbioso").
 *   Integrazione eventi/gare locali.
+*   **RideMatch:** Sistema di matching ciclisti con swipe interface (Fase Beta).
+*   Integrazione Strava per verifica dati e social proof.
 
 ### Fase 3: Premium Ecosystem - Mese 9+
 *   Live Tracking (condividi posizione in tempo reale con amici).
@@ -63,10 +71,19 @@ TerraGravel è un'applicazione mobile "Super App" dedicata verticalmente al cicl
 *   **Retention Rate:** Quanti utenti tornano ad aprire l'app entro 30 giorni.
 *   **Km Pedalati:** Totale km tracciati dagli utenti.
 *   **Contributi Community:** Numero di POI (punti di interesse) o segnalazioni aggiunte dagli utenti.
+*   **RideMatch Engagement:**
+    *   Numero di match giornalieri
+    *   Percentuale di match che portano a uscite reali (conversion)
+    *   Tasso di no-show (obiettivo: <5%)
+    *   Rating medio post-ride (obiettivo: >4/5 stelle)
 
 ## 8. Monetizzazione (Ipotesi)
 *   **Freemium:** Funzioni base gratuite.
-*   **Abbonamento "TerraGravel PRO" (2.99€/mese o 29.99€/anno):** Mappe offline illimitate, mappe di calore (heatmap), sconti su brand partner.
+*   **Abbonamento "TerraGravel PRO" (2.99€/mese o 29.99€/anno):**
+    *   Mappe offline illimitate
+    *   Mappe di calore (heatmap)
+    *   Sconti su brand partner
+    *   **RideMatch PRO:** Super-Like illimitati (vs 3/giorno free), Rewind illimitati, filtri avanzati, badge prioritario nello stack
 
 ---
 
