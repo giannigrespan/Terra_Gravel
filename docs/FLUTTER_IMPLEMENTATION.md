@@ -765,6 +765,373 @@ class CyclistCardWidget extends StatelessWidget {
 
 ---
 
+## Match Screen con Animazioni (Production Polish)
+
+### Widget: Schermata Match Animata
+
+Aggiungi questo widget per creare un'esperienza "dopamine hit" quando c'è un match:
+
+```dart
+// ============================================================================
+// SCHERMATA "IT'S A MATCH!" - Overlay animato
+// ============================================================================
+class MatchScreen extends StatefulWidget {
+  final CyclistProfile matchedProfile;
+
+  const MatchScreen({super.key, required this.matchedProfile});
+
+  @override
+  State<MatchScreen> createState() => _MatchScreenState();
+}
+
+class _MatchScreenState extends State<MatchScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Setup animazione "Pop-up" con effetto elastico
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.elasticOut, // Effetto rimbalzo gradevole
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      // Sfondo semitrasparente - mantiene contesto visivo
+      backgroundColor: Colors.black.withOpacity(0.85),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // ========== TITOLO ESPLOSIVO ==========
+            const Text(
+              "IT'S A MATCH!",
+              style: TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFEDA739), // Giallo Gravel
+                letterSpacing: 2,
+                fontStyle: FontStyle.italic,
+                shadows: [
+                  Shadow(
+                    blurRadius: 10,
+                    color: Colors.orangeAccent,
+                    offset: Offset(0, 0),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              "Hai trovato un compagno di pedalata!",
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 50),
+
+            // ========== AVATAR ANIMATI ==========
+            ScaleTransition(
+              scale: _scaleAnimation,
+              child: SizedBox(
+                height: 200,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Avatar MATCH (Destra)
+                    Positioned(
+                      right: 40,
+                      child: _buildAvatarCircle(
+                        widget.matchedProfile.imageUrl,
+                        60,
+                      ),
+                    ),
+                    // Avatar UTENTE (Sinistra)
+                    // TODO: Sostituire con currentUser.avatarUrl dopo login
+                    Positioned(
+                      left: 40,
+                      child: _buildAvatarCircle(
+                        "https://images.pexels.com/photos/1550913/pexels-photo-1550913.jpeg?auto=compress&cs=tinysrgb&w=800",
+                        60,
+                      ),
+                    ),
+                    // Icona centrale (Fulmine/Energia)
+                    const CircleAvatar(
+                      backgroundColor: Colors.white,
+                      radius: 25,
+                      child: Icon(
+                        Icons.flash_on,
+                        color: Color(0xFFEDA739),
+                        size: 30,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ========== INFO MATCH ==========
+            Text(
+              "Tu & ${widget.matchedProfile.name}",
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 60),
+
+            // ========== CALL TO ACTION ==========
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Column(
+                children: [
+                  // Bottone PRIMARIO: Saluta
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEDA739),
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      onPressed: () {
+                        // TODO: Naviga alla chat screen
+                        debugPrint("Apri chat con ${widget.matchedProfile.id}");
+                        Navigator.pop(context);
+                        // Navigator.push(context, MaterialPageRoute(
+                        //   builder: (_) => ChatScreen(matchId: matchId)
+                        // ));
+                      },
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      label: const Text(
+                        "SALUTA SUBITO",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+
+                  // Bottone SECONDARIO: Continua
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Torna allo stack
+                    },
+                    child: const Text(
+                      "Cerca altri ciclisti",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper: Avatar circolare con bordo
+  Widget _buildAvatarCircle(String url, double radius) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.5),
+            blurRadius: 20,
+            spreadRadius: 5,
+          ),
+        ],
+      ),
+      child: CircleAvatar(
+        radius: radius,
+        backgroundImage: NetworkImage(url),
+      ),
+    );
+  }
+}
+```
+
+### Integrazione nel RideMatchPage
+
+Sostituisci le funzioni `_onSwipe` e `_showMatchDialog` con queste versioni aggiornate:
+
+```dart
+// ========== BUSINESS LOGIC (Aggiornato) ==========
+
+bool _onSwipe(
+  int previousIndex,
+  int? currentIndex,
+  CardSwiperDirection direction,
+) {
+  setState(() {
+    _currentIndex = currentIndex ?? candidates.length;
+  });
+
+  final swipedProfile = candidates[previousIndex];
+
+  if (direction == CardSwiperDirection.right) {
+    debugPrint('✅ LIKE a ${swipedProfile.name}!');
+    _handleLike(swipedProfile);
+  } else if (direction == CardSwiperDirection.left) {
+    debugPrint('❌ PASS a ${swipedProfile.name}.');
+    _handlePass(swipedProfile);
+  } else if (direction == CardSwiperDirection.top) {
+    debugPrint('⭐ SUPER-LIKE a ${swipedProfile.name}!');
+    _handleSuperLike(swipedProfile);
+  }
+
+  if (currentIndex == null || currentIndex >= candidates.length) {
+    _loadMoreProfiles();
+  }
+
+  return true;
+}
+
+void _handleLike(CyclistProfile profile) {
+  // TODO: API Call POST /api/v1/ridematch/swipe
+  // Simula match con 50% probabilità
+  Future.delayed(const Duration(milliseconds: 200), () {
+    if (DateTime.now().millisecond % 2 == 0) {
+      _showMatchScreen(profile);
+    }
+  });
+}
+
+// Nuova funzione: Mostra overlay match
+void _showMatchScreen(CyclistProfile profile) {
+  Navigator.of(context).push(
+    PageRouteBuilder(
+      opaque: false, // CRITICO: Mantiene schermata sotto visibile
+      pageBuilder: (context, _, __) => MatchScreen(matchedProfile: profile),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        // Fade in delicato
+        return FadeTransition(opacity: animation, child: child);
+      },
+    ),
+  );
+}
+```
+
+### Design Rationale (UX Avanzata)
+
+#### 1. Overlay Trasparente vs Full Screen
+```dart
+PageRouteBuilder(
+  opaque: false,  // Mostra la schermata sotto
+  ...
+)
+```
+
+**Perché?**
+- L'utente vede ancora lo stack di card sotto (sfocato)
+- Non perde il "contesto" di dove si trova nell'app
+- Riduce disorientamento (specialmente importante su mobile)
+- Può chiudere rapidamente e tornare allo swipe
+
+#### 2. Animazione Elastica (Elastic Curve)
+```dart
+curve: Curves.elasticOut  // vs Curves.easeOut (boring)
+```
+
+**Perché?**
+- `Curves.elasticOut` crea un "rimbalzo" gradevole
+- Trasmette energia ed eccitazione (dopamine hit!)
+- È memorabile - l'utente ricorda l'emozione del match
+- Differenzia l'app da competitor che usano fade banali
+
+**Confronto visivo:**
+- `easeOut`: 0 → 1 (lineare, noioso)
+- `elasticOut`: 0 → 1.2 → 0.9 → 1.05 → 1 (rimbalza!)
+
+#### 3. Gerarchia Bottoni (CTA Optimization)
+```dart
+// PRIMARIO (Grande, colorato)
+ElevatedButton → "SALUTA SUBITO"
+
+// SECONDARIO (Trasparente, discreto)
+TextButton → "Cerca altri"
+```
+
+**Perché?**
+- **Design Goal:** Massimizzare engagement (chat = retention)
+- Bottone primario è **70% più grande** del secondario
+- Colore giallo acceso attira l'occhio immediatamente
+- TextButton secondario è "escape hatch" per power users
+- Ordine: Prima CTA principale, poi alternativa
+
+#### 4. Avatar con Bordo Bianco
+```dart
+border: Border.all(color: Colors.white, width: 4),
+boxShadow: [BoxShadow(blurRadius: 20, ...)]
+```
+
+**Perché?**
+- Bordo bianco spesso crea "separazione" visiva dallo sfondo scuro
+- BoxShadow dà profondità (le foto "fluttuano" nello spazio)
+- Richiama il design delle foto Polaroid (nostalgia inconscia)
+
+#### 5. Fulmine Centrale vs Cuore
+```dart
+Icon(Icons.flash_on) // Energia, velocità
+// vs
+Icon(Icons.favorite) // Troppo romantico per cycling app
+```
+
+**Perché?**
+- Fulmine comunica: energia, compatibilità, "scintilla"
+- È gender-neutral (funziona per tutti)
+- Si allinea al tema outdoor/sportivo dell'app
+- Il cuore è troppo romantico per un'app di cycling
+
+#### 6. Ritardo 200ms Prima dell'Overlay
+```dart
+Future.delayed(const Duration(milliseconds: 200), () {
+  _showMatchScreen(profile);
+});
+```
+
+**Perché?**
+- Permette alla card di completare l'animazione swipe
+- Evita "stutter" visivo (card che si ferma a metà)
+- Crea micro-suspense: "È match? ...SI!"
+- Rende l'esperienza più fluida e naturale
+
+---
+
 ## Spiegazione Tecnica delle Scelte
 
 ### 1. Gradient Overlay Pattern
