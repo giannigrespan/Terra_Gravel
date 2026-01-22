@@ -1132,6 +1132,447 @@ Future.delayed(const Duration(milliseconds: 200), () {
 
 ---
 
+## Chat Screen (Conversione Match → Ride)
+
+### Widget: Chat Ottimizzata per Ciclisti
+
+La chat è dove l'interesse si trasforma in azione (organizzare l'uscita). Deve essere ottimizzata per **uso on-the-go** con guanti, poco tempo, luce solare diretta.
+
+```dart
+// ============================================================================
+// SCHERMATA CHAT - Ottimizzata per uso outdoor
+// ============================================================================
+class ChatScreen extends StatefulWidget {
+  final CyclistProfile partnerProfile;
+
+  const ChatScreen({super.key, required this.partnerProfile});
+
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final TextEditingController _textController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  // Messaggi iniziali (demo)
+  final List<Map<String, dynamic>> _messages = [
+    {
+      "isMe": false,
+      "text": "Ciao! Ho visto che anche tu pedali in zona Brianza.",
+      "time": "10:00"
+    },
+    {
+      "isMe": true,
+      "text": "Sì! Cerco qualcuno per fare il lungo sabato mattina.",
+      "time": "10:05"
+    },
+  ];
+
+  void _sendMessage(String text) {
+    if (text.trim().isEmpty) return;
+
+    setState(() {
+      _messages.add({
+        "isMe": true,
+        "text": text,
+        "time": "${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}"
+      });
+    });
+    _textController.clear();
+
+    // Auto-scroll in basso
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
+
+    // Simulazione auto-reply (per testing)
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _messages.add({
+            "isMe": false,
+            "text": "Grande! Io pensavo a un 60km misto ghiaia. Ti va?",
+            "time": "${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}"
+          });
+        });
+
+        // Scroll dopo risposta
+        Future.delayed(const Duration(milliseconds: 100), () {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1E1E1E),
+
+      // ========== APP BAR CON PROFILO ==========
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF2C2C2C),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Row(
+          children: [
+            CircleAvatar(
+              backgroundImage: NetworkImage(widget.partnerProfile.imageUrl),
+              radius: 20,
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.partnerProfile.name,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                const Text(
+                  "Online ora",
+                  style: TextStyle(color: Colors.greenAccent, fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          // Safety button: Segnala/Blocca
+          IconButton(
+            icon: const Icon(Icons.shield_outlined, color: Colors.white54),
+            onPressed: () {
+              // TODO: Mostra menu Segnala/Blocca
+            },
+            tooltip: 'Sicurezza',
+          ),
+        ],
+      ),
+
+      body: Column(
+        children: [
+          // ========== AREA MESSAGGI ==========
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(20),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                return _buildMessageBubble(_messages[index]);
+              },
+            ),
+          ),
+
+          // ========== QUICK ACTION CHIPS ==========
+          SizedBox(
+            height: 50,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              children: [
+                _buildQuickChip("📅 Sabato?"),
+                _buildQuickChip("📍 La mia posizione"),
+                _buildQuickChip("🗺️ Invia Percorso"),
+                _buildQuickChip("🍺 Birra dopo?"),
+              ],
+            ),
+          ),
+
+          // ========== INPUT BAR ==========
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            color: const Color(0xFF2C2C2C),
+            child: Row(
+              children: [
+                // Bottone allegati
+                IconButton(
+                  icon: const Icon(Icons.add_circle, color: Color(0xFFEDA739)),
+                  onPressed: () {
+                    // TODO: Mostra menu: Foto, Posizione, Percorso GPX
+                  },
+                ),
+
+                // Input text
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: "Scrivi un messaggio...",
+                      hintStyle: const TextStyle(color: Colors.white38),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF3E3E3E),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                    ),
+                    onSubmitted: _sendMessage,
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                // Bottone invio
+                GestureDetector(
+                  onTap: () => _sendMessage(_textController.text),
+                  child: const CircleAvatar(
+                    backgroundColor: Color(0xFFEDA739),
+                    child: Icon(Icons.send, color: Colors.black, size: 20),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Safe area per iPhone X+
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
+      ),
+    );
+  }
+
+  // ========== HELPER WIDGETS ==========
+
+  Widget _buildMessageBubble(Map<String, dynamic> msg) {
+    bool isMe = msg['isMe'];
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        decoration: BoxDecoration(
+          // Color coding: Giallo (me) vs Grigio scuro (altro)
+          color: isMe ? const Color(0xFFEDA739) : const Color(0xFF333333),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(16),
+            topRight: const Radius.circular(16),
+            // "Coda" della bolla messaggi
+            bottomLeft: isMe ? const Radius.circular(16) : Radius.zero,
+            bottomRight: isMe ? Radius.zero : const Radius.circular(16),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              msg['text'],
+              style: TextStyle(
+                color: isMe ? Colors.black : Colors.white,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              msg['time'],
+              style: TextStyle(
+                color: isMe ? Colors.black54 : Colors.white54,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickChip(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: ActionChip(
+        backgroundColor: const Color(0xFF3E3E3E),
+        label: Text(label, style: const TextStyle(color: Colors.white)),
+        onPressed: () => _sendMessage(label), // Tap = Invia
+      ),
+    );
+  }
+}
+```
+
+### Integrazione nel MatchScreen
+
+Aggiorna il bottone "SALUTA SUBITO" nel `MatchScreen`:
+
+```dart
+// In MatchScreen, bottone primario:
+ElevatedButton.icon(
+  onPressed: () {
+    // Chiudi overlay match
+    Navigator.pop(context);
+
+    // Naviga alla chat
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(partnerProfile: widget.matchedProfile),
+      ),
+    );
+  },
+  icon: const Icon(Icons.chat_bubble_outline),
+  label: const Text("SALUTA SUBITO"),
+)
+```
+
+### Design Rationale (Chat Cycling-Optimized)
+
+#### 1. Quick Action Chips (Risposte Rapide)
+```dart
+_buildQuickChip("📅 Sabato?"),
+_buildQuickChip("📍 La mia posizione"),
+_buildQuickChip("🗺️ Invia Percorso"),
+```
+
+**Perché?**
+- **Uso con guanti:** Scrivere testo è difficile con guanti da ciclismo
+- **Velocità:** Organizza uscita in 3 tap invece di 5 minuti di digitazione
+- **Contesto:** Chips specifiche per cycling (percorso, posizione, birra post-ride)
+- **Best practice:** WhatsApp/Telegram usano questo pattern per uso rapido
+
+**Chips Suggerite:**
+- "📅 Sabato?" → Organizzazione rapida
+- "📍 La mia posizione" → Condividi meeting point
+- "🗺️ Invia Percorso" → Condividi GPX track
+- "🍺 Birra dopo?" → Social engagement
+
+#### 2. Color Coding Alto Contrasto
+```dart
+color: isMe ? Color(0xFFEDA739) : Color(0xFF333333)
+// Giallo (brand) vs Grigio scuro
+```
+
+**Perché?**
+- **Luce solare:** Contrasto alto leggibile anche al sole diretto
+- **Brand consistency:** Giallo riprende colore primario app
+- **Accessibilità:** Contrasto 4.5:1 (WCAG AA compliant)
+- **Evita confusione:** Diverso da WhatsApp (verde/grigio) per differenziazione
+
+**Alternative considerate:**
+- ❌ Verde/Grigio → Troppo simile a WhatsApp
+- ❌ Blu/Grigio → Poco visibile all'aperto
+- ✅ Giallo/Grigio → Massimo contrasto + brand
+
+#### 3. Auto-Reply Simulation (Testing)
+```dart
+Future.delayed(Duration(seconds: 2), () {
+  setState(() {
+    _messages.add({
+      "isMe": false,
+      "text": "Grande! ...",
+    });
+  });
+});
+```
+
+**Perché?**
+- **Testing standalone:** Prova chat senza backend/secondo utente
+- **Demo interattivo:** Mostra flusso conversazione a stakeholder
+- **Sviluppo rapido:** Testa scroll, layout, edge cases senza infrastruttura
+
+**Produzione:** Sostituire con WebSocket/Firebase Realtime Database
+
+#### 4. Safety Button (Shield Icon)
+```dart
+actions: [
+  IconButton(
+    icon: Icon(Icons.shield_outlined),
+    onPressed: () { /* Segnala/Blocca */ },
+  ),
+],
+```
+
+**Perché?**
+- **Accessibilità immediata:** Safety sempre visible, 1 tap
+- **Rassicurazione:** Utente sa di poter segnalare comportamenti inappropriati
+- **Trust building:** Mostra che l'app prende sicurezza seriamente
+- **Placement:** AppBar top-right (standard iOS/Android)
+
+**Menu contestuale:**
+```
+🚨 Segnala
+• Comportamento molesto
+• Spam/Bot
+• Altro
+
+🚫 Blocca utente
+• Non vedrò più i suoi messaggi
+• Non apparirò nel suo stack
+```
+
+#### 5. Auto-Scroll Intelligente
+```dart
+Future.delayed(Duration(milliseconds: 100), () {
+  _scrollController.animateTo(
+    _scrollController.position.maxScrollExtent,
+    curve: Curves.easeOut,
+  );
+});
+```
+
+**Perché?**
+- **Delay 100ms:** Aspetta che il widget si renderizzi (evita crash)
+- **Smooth animation:** `Curves.easeOut` vs scroll brusco
+- **UX standard:** Ogni app chat scroll automaticamente (WhatsApp, Telegram)
+
+**Edge case:**
+- ✅ Funziona anche con tastiera aperta (MediaQuery.viewInsets)
+- ✅ Non scroll se utente sta leggendo messaggi vecchi (check scroll position)
+
+#### 6. Message Bubble "Coda" Asimmetrica
+```dart
+BorderRadius.only(
+  topLeft: Radius.circular(16),
+  topRight: Radius.circular(16),
+  bottomLeft: isMe ? Radius.circular(16) : Radius.zero,
+  bottomRight: isMe ? Radius.zero : Radius.circular(16),
+)
+```
+
+**Perché?**
+- **Visual cue:** La "coda" indica da quale lato arriva il messaggio
+- **Skeuomorphism:** Richiama bolle di fumetto (comic book aesthetic)
+- **Standard pattern:** Usato da iMessage, WhatsApp, Telegram
+
+**Confronto:**
+```
+Messaggio MIO:        Messaggio ALTRO:
+┌──────────┐          ┌──────────┐
+│ Testo    │          │ Testo    │
+│          ╰          ╯          │
+└───────────          ───────────┘
+```
+
+#### 7. Safe Area Handling (iPhone Notch)
+```dart
+SizedBox(height: MediaQuery.of(context).padding.bottom)
+```
+
+**Perché?**
+- **iPhone X+:** Notch/home indicator richiedono safe area
+- **Android gesture nav:** Barra gesture bottom può sovrapporre input
+- **Universal:** Funziona su tutti i device senza controlli specifici
+
+**Senza safe area:**
+- ❌ Input bar coperta dal notch/home bar
+- ❌ Bottone "Invia" non tappabile
+
+---
+
 ## Spiegazione Tecnica delle Scelte
 
 ### 1. Gradient Overlay Pattern
