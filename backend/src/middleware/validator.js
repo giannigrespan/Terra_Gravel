@@ -134,6 +134,49 @@ const uuidParamValidation = [
   handleValidationErrors,
 ];
 
+/**
+ * Validation rules for forgot password
+ */
+const forgotPasswordValidation = [
+  body('email').trim().isEmail().normalizeEmail().withMessage('Must be a valid email address'),
+  handleValidationErrors,
+];
+
+/**
+ * Validation rules for reset password
+ */
+const resetPasswordValidation = [
+  body('token').notEmpty().withMessage('Token is required'),
+  body('newPassword')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+  handleValidationErrors,
+];
+
+/**
+ * Validation rules for email verification
+ */
+const verifyEmailValidation = [
+  body('token').notEmpty().withMessage('Token is required'),
+  handleValidationErrors,
+];
+
+/**
+ * Validation rules for user report
+ */
+const reportUserValidation = [
+  body('reason')
+    .isIn(['SPAM', 'HARASSMENT', 'INAPPROPRIATE_CONTENT', 'FAKE_PROFILE', 'NO_SHOW', 'DANGEROUS_BEHAVIOR', 'OTHER'])
+    .withMessage('Invalid report reason'),
+  body('description')
+    .optional()
+    .isLength({ max: 1000 })
+    .withMessage('Description must be 1000 characters or less'),
+  handleValidationErrors,
+];
+
 module.exports = {
   handleValidationErrors,
   signupValidation,
@@ -143,4 +186,8 @@ module.exports = {
   feedbackValidation,
   locationValidation,
   uuidParamValidation,
+  forgotPasswordValidation,
+  resetPasswordValidation,
+  verifyEmailValidation,
+  reportUserValidation,
 };
