@@ -1,0 +1,104 @@
+# GitHub Actions Workflow - Database Migrations
+# Runs database migrations on Neon PostgreSQL
+
+name: 🗄️ Database Migration
+
+on:
+  workflow_dispatch: # Manual trigger only for safety
+    inputs:
+      migration_file:
+        description: 'Migration file to run (e.g., db/init_db.sql)'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+
+jobs:
+  migrate:
+    name: Run Migration
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup PostgreSQL client
+      - name: 🔧 Setup PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      # 3. Verify migration file exists
+      - name: 🔍 Verify migration file
+        run: |
+          if [ ! -f "${{ github.event.inputs.migration_file }}" ]; then
+            echo "❌ Migration file not found: ${{ github.event.inputs.migration_file }}"
+            exit 1
+          fi
+          echo "✅ Migration file found"
+          echo "📄 File: ${{ github.event.inputs.migration_file }}"
+          echo "📏 Size: $(du -h "${{ github.event.inputs.migration_file }}" | cut -f1)"
+
+      # 4. Show migration preview
+      - name: 👁️ Migration Preview
+        run: |
+          echo "📋 Migration SQL Preview (first 50 lines):"
+          head -n 50 "${{ github.event.inputs.migration_file }}"
+
+      # 5. Run migration
+      - name: 🚀 Run Migration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+        run: |
+          echo "🎯 Target environment: $ENVIRONMENT"
+          echo "📂 Running migration: ${{ github.event.inputs.migration_file }}"
+
+          # Run the migration
+          psql "$DATABASE_URL" -f "${{ github.event.inputs.migration_file }}"
+
+          if [ $? -eq 0 ]; then
+            echo "✅ Migration completed successfully!"
+          else
+            echo "❌ Migration failed!"
+            exit 1
+          fi
+
+      # 6. Verify migration
+      - name: ✅ Verify Migration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "🔍 Verifying database state..."
+
+          # Check tables exist
+          psql "$DATABASE_URL" -c "\dt" || true
+
+          # Count records in key tables
+          echo ""
+          echo "📊 Record counts:"
+          psql "$DATABASE_URL" -c "SELECT 'users' as table_name, COUNT(*) as count FROM users UNION ALL SELECT 'rides', COUNT(*) FROM rides UNION ALL SELECT 'conversations', COUNT(*) FROM conversations;" || true
+
+      # 7. Notify on success
+      - name: 🎉 Success
+        if: success()
+        run: |
+          echo "✅ Migration workflow completed successfully!"
+          echo "🗄️ Database: ${{ github.event.inputs.environment }}"
+          echo "📄 File: ${{ github.event.inputs.migration_file }}"
+
+      # 8. Notify on failure
+      - name: ❌ Failure
+        if: failure()
+        run: |
+          echo "💥 Migration failed!"
+          echo "⚠️ Please check the logs and database state"
+          echo "🔧 You may need to manually rollback changes"
+          exit 1

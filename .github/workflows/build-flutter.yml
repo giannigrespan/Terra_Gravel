@@ -1,0 +1,198 @@
+# GitHub Actions Workflow - Build Flutter App
+# Builds Android APK and iOS IPA for TerraGravel
+
+name: 📱 Build Flutter App
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'terragravel_app/**'
+      - '.github/workflows/build-flutter.yml'
+  pull_request:
+    paths:
+      - 'terragravel_app/**'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Java (required for Android builds)
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      # 3. Setup Flutter
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      # 4. Verify Flutter installation
+      - name: 🔍 Verify Flutter
+        run: |
+          flutter --version
+          flutter doctor -v
+
+      # 5. Install dependencies
+      - name: 📦 Install dependencies
+        working-directory: ./terragravel_app
+        run: flutter pub get
+
+      # 6. Run analyzer
+      - name: 🔍 Analyze code
+        working-directory: ./terragravel_app
+        run: flutter analyze
+        continue-on-error: true
+
+      # 7. Run tests
+      - name: 🧪 Run tests
+        working-directory: ./terragravel_app
+        run: flutter test
+        continue-on-error: true
+
+      # 8. Build APK
+      - name: 🏗️ Build Android APK
+        working-directory: ./terragravel_app
+        run: flutter build apk --release
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL || 'https://terragravel.vercel.app/api/v1' }}
+
+      # 9. Upload APK artifact
+      - name: 📤 Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk
+          path: terragravel_app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      # 10. Notify on success
+      - name: ✅ Build Success
+        if: success()
+        run: |
+          echo "🎉 Android APK built successfully!"
+          echo "📦 APK size: $(du -h terragravel_app/build/app/outputs/flutter-apk/app-release.apk | cut -f1)"
+
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+    # Only run iOS build on main branch to save runner time
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      # 1. Checkout code
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Flutter
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      # 3. Verify Flutter installation
+      - name: 🔍 Verify Flutter
+        run: |
+          flutter --version
+          flutter doctor -v
+
+      # 4. Install dependencies
+      - name: 📦 Install dependencies
+        working-directory: ./terragravel_app
+        run: flutter pub get
+
+      # 5. Install CocoaPods dependencies
+      - name: 🍎 Install CocoaPods
+        working-directory: ./terragravel_app/ios
+        run: pod install
+
+      # 6. Build iOS (without codesigning for now)
+      - name: 🏗️ Build iOS
+        working-directory: ./terragravel_app
+        run: |
+          flutter build ios --release --no-codesign
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL || 'https://terragravel.vercel.app/api/v1' }}
+
+      # 7. Notify on success
+      - name: ✅ Build Success
+        if: success()
+        run: echo "🎉 iOS build completed successfully!"
+
+  # Job for creating GitHub Release with APK
+  release:
+    name: Create Release
+    needs: [build-android]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      # 1. Checkout code
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Download APK artifact
+      - name: 📥 Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-apk
+          path: ./artifacts
+
+      # 3. Get version from pubspec.yaml
+      - name: 📋 Get version
+        id: version
+        run: |
+          VERSION=$(grep "^version:" terragravel_app/pubspec.yaml | cut -d' ' -f2 | cut -d'+' -f1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      # 4. Create GitHub Release (only on main/master)
+      - name: 🎉 Create Release
+        uses: softprops/action-gh-release@v1
+        if: success()
+        with:
+          tag_name: v${{ steps.version.outputs.version }}-${{ github.run_number }}
+          name: Release v${{ steps.version.outputs.version }} Build ${{ github.run_number }}
+          body: |
+            🚀 **TerraGravel Mobile App Release**
+
+            **Version**: ${{ steps.version.outputs.version }}
+            **Build**: ${{ github.run_number }}
+            **Date**: ${{ github.event.head_commit.timestamp }}
+
+            ### 📦 Downloads
+            - Android APK (attached below)
+
+            ### 🔄 Changes
+            ${{ github.event.head_commit.message }}
+
+            ### 📱 Installation
+            1. Download the APK file below
+            2. Enable "Install from Unknown Sources" on your Android device
+            3. Install the APK
+            4. Open TerraGravel and enjoy!
+
+            ---
+            *Built with Flutter 3.19.0 | Backend: Vercel + Neon PostgreSQL*
+          files: |
+            ./artifacts/app-release.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

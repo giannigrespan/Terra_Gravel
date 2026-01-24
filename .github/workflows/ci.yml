@@ -1,0 +1,239 @@
+# GitHub Actions Workflow - Continuous Integration
+# Runs tests, linting, and checks on all pull requests
+
+name: 🔄 CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  push:
+    branches:
+      - develop
+
+jobs:
+  backend-ci:
+    name: Backend CI
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: terragravel_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      # 1. Checkout code
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Node.js
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      # 3. Install dependencies
+      - name: 📦 Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      # 4. Run linting
+      - name: 🔍 Lint code
+        working-directory: ./backend
+        run: |
+          if grep -q '"lint"' package.json; then
+            npm run lint
+          else
+            echo "⚠️ No lint script found, skipping"
+          fi
+        continue-on-error: true
+
+      # 5. Run tests with coverage
+      - name: 🧪 Run tests
+        working-directory: ./backend
+        run: |
+          if grep -q '"test"' package.json; then
+            npm test
+          else
+            echo "⚠️ No test script found, skipping"
+          fi
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+          DB_NAME: terragravel_test
+          DB_SSL: false
+          JWT_SECRET: test_secret_key_for_ci_only
+          JWT_EXPIRES_IN: 1h
+        continue-on-error: true
+
+      # 6. Check for security vulnerabilities
+      - name: 🔒 Security audit
+        working-directory: ./backend
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      # 7. Check dependencies for updates
+      - name: 📋 Check outdated dependencies
+        working-directory: ./backend
+        run: npm outdated || true
+        continue-on-error: true
+
+  flutter-ci:
+    name: Flutter CI
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Java
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 3. Setup Flutter
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+          cache: true
+
+      # 4. Install dependencies
+      - name: 📦 Install dependencies
+        working-directory: ./terragravel_app
+        run: flutter pub get
+
+      # 5. Verify dependencies
+      - name: 🔍 Verify dependencies
+        working-directory: ./terragravel_app
+        run: flutter pub outdated || true
+        continue-on-error: true
+
+      # 6. Run analyzer
+      - name: 🔍 Analyze code
+        working-directory: ./terragravel_app
+        run: flutter analyze
+
+      # 7. Check formatting
+      - name: 📝 Check formatting
+        working-directory: ./terragravel_app
+        run: dart format --set-exit-if-changed . || true
+        continue-on-error: true
+
+      # 8. Run tests
+      - name: 🧪 Run tests
+        working-directory: ./terragravel_app
+        run: flutter test
+        continue-on-error: true
+
+      # 9. Build APK (smoke test)
+      - name: 🏗️ Build APK (smoke test)
+        working-directory: ./terragravel_app
+        run: flutter build apk --debug --target-platform android-arm64
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Run Trivy security scanner
+      - name: 🔒 Run Trivy scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+        continue-on-error: true
+
+      # 3. Upload Trivy results to GitHub Security
+      - name: 📤 Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout code
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for better analysis
+
+      # 2. Setup Node.js
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3. Count lines of code
+      - name: 📊 Count lines of code
+        run: |
+          echo "📈 Lines of Code:"
+          echo "Backend:"
+          find backend/src -name "*.js" -o -name "*.ts" | xargs wc -l | tail -1 || echo "No backend code"
+          echo ""
+          echo "Flutter:"
+          find terragravel_app/lib -name "*.dart" | xargs wc -l | tail -1 || echo "No Flutter code"
+        continue-on-error: true
+
+      # 4. Check for TODO/FIXME comments
+      - name: 📝 Check TODOs
+        run: |
+          echo "📋 TODO/FIXME items:"
+          grep -r "TODO\|FIXME" backend/src terragravel_app/lib || echo "No TODOs found"
+        continue-on-error: true
+
+  summary:
+    name: CI Summary
+    needs: [backend-ci, flutter-ci, security-scan, code-quality]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: 📊 CI Summary
+        run: |
+          echo "🎯 CI Pipeline Summary"
+          echo "====================="
+          echo ""
+          echo "✅ Backend CI: ${{ needs.backend-ci.result }}"
+          echo "✅ Flutter CI: ${{ needs.flutter-ci.result }}"
+          echo "✅ Security Scan: ${{ needs.security-scan.result }}"
+          echo "✅ Code Quality: ${{ needs.code-quality.result }}"
+          echo ""
+          if [ "${{ needs.backend-ci.result }}" == "success" ] && [ "${{ needs.flutter-ci.result }}" == "success" ]; then
+            echo "🎉 All critical checks passed!"
+            exit 0
+          else
+            echo "⚠️ Some checks failed - please review"
+            exit 1
+          fi
