@@ -20,13 +20,17 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
+    password_hash TEXT, -- Nullable for OAuth-only users
     email_verified BOOLEAN DEFAULT FALSE,
     phone VARCHAR(20),
     phone_verified BOOLEAN DEFAULT FALSE,
     avatar_url TEXT,
     -- Approximate location (rounded to 1km for privacy)
     location GEOGRAPHY(POINT, 4326),
+    -- OAuth fields
+    google_id VARCHAR(255) UNIQUE,
+    google_connected BOOLEAN DEFAULT FALSE,
+    -- Metadata
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     last_seen_at TIMESTAMP,
@@ -39,6 +43,7 @@ CREATE INDEX idx_users_location ON users USING GIST(location);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_last_seen ON users(last_seen_at);
 CREATE INDEX idx_users_active ON users(is_active) WHERE is_active = TRUE;
+CREATE INDEX idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL;
 
 -- ============================================
 -- Table: cyclist_profile
