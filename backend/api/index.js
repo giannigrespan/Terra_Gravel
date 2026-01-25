@@ -15,6 +15,10 @@ const userRoutes = require('../src/routes/userRoutes');
 const cyclistProfileRoutes = require('../src/routes/cyclistProfileRoutes');
 const rideMatchRoutes = require('../src/routes/rideMatchRoutes');
 const messageRoutes = require('../src/routes/messageRoutes');
+const adminRoutes = require('../src/routes/adminRoutes');
+const liveReportsRoutes = require('../src/routes/liveReportsRoutes');
+const feedRoutes = require('../src/routes/feedRoutes');
+const notificationRoutes = require('../src/routes/notificationRoutes');
 
 // Initialize Express app
 const app = express();
@@ -66,12 +70,16 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/cyclist-profile', cyclistProfileRoutes);
 app.use('/api/v1/ridematch', rideMatchRoutes);
 app.use('/api/v1/matches', messageRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/reports', liveReportsRoutes);
+app.use('/api/v1/feed', feedRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
     name: 'TerraGravel API',
-    version: '1.0.0',
+    version: '1.1.0',
     description: 'Cyclist matching platform backend',
     endpoints: {
       health: '/health',
@@ -80,7 +88,23 @@ app.get('/', (req, res) => {
       cyclistProfile: '/api/v1/cyclist-profile',
       rideMatch: '/api/v1/ridematch',
       messages: '/api/v1/matches/:matchId/messages',
+      admin: '/api/v1/admin',
+      liveReports: '/api/v1/reports',
+      feed: '/api/v1/feed',
+      notifications: '/api/v1/notifications',
     },
+    newFeatures: [
+      'Password reset (POST /api/v1/auth/forgot-password, POST /api/v1/auth/reset-password)',
+      'Email verification (POST /api/v1/auth/send-verification, POST /api/v1/auth/verify-email)',
+      'Block users (POST /api/v1/users/:userId/block)',
+      'Report users (POST /api/v1/users/:userId/report)',
+      'User statistics (GET /api/v1/users/me/statistics)',
+      'Search users (GET /api/v1/users/search?q=username)',
+      'Live road reports (POST/GET /api/v1/reports)',
+      'Activity feed (GET /api/v1/feed)',
+      'Push notifications (POST /api/v1/notifications/devices)',
+      'Admin dashboard (GET /api/v1/admin/stats)',
+    ],
   });
 });
 
