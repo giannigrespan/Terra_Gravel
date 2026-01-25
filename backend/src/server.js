@@ -15,6 +15,10 @@ const userRoutes = require('./routes/userRoutes');
 const cyclistProfileRoutes = require('./routes/cyclistProfileRoutes');
 const rideMatchRoutes = require('./routes/rideMatchRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const liveReportsRoutes = require('./routes/liveReportsRoutes');
+const feedRoutes = require('./routes/feedRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // Initialize Express app
 const app = express();
@@ -71,12 +75,16 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/cyclist-profile', cyclistProfileRoutes);
 app.use('/api/v1/ridematch', rideMatchRoutes);
 app.use('/api/v1/matches', messageRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/reports', liveReportsRoutes);
+app.use('/api/v1/feed', feedRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
     name: 'TerraGravel API',
-    version: '1.0.0',
+    version: '1.1.0',
     description: 'Cyclist matching platform backend',
     endpoints: {
       health: '/health',
@@ -85,7 +93,23 @@ app.get('/', (req, res) => {
       cyclistProfile: '/api/v1/cyclist-profile',
       rideMatch: '/api/v1/ridematch',
       messages: '/api/v1/matches/:matchId/messages',
+      admin: '/api/v1/admin',
+      liveReports: '/api/v1/reports',
+      feed: '/api/v1/feed',
+      notifications: '/api/v1/notifications',
     },
+    newFeatures: [
+      'Password reset (POST /api/v1/auth/forgot-password, POST /api/v1/auth/reset-password)',
+      'Email verification (POST /api/v1/auth/send-verification, POST /api/v1/auth/verify-email)',
+      'Block users (POST /api/v1/users/:userId/block)',
+      'Report users (POST /api/v1/users/:userId/report)',
+      'User statistics (GET /api/v1/users/me/statistics)',
+      'Search users (GET /api/v1/users/search?q=username)',
+      'Live road reports (POST/GET /api/v1/reports)',
+      'Activity feed (GET /api/v1/feed)',
+      'Push notifications (POST /api/v1/notifications/devices)',
+      'Admin dashboard (GET /api/v1/admin/stats)',
+    ],
   });
 });
 
@@ -148,12 +172,23 @@ const startServer = async () => {
     const PORT = config.port;
     app.listen(PORT, () => {
       console.log('\n=================================');
-      console.log('🚴 TerraGravel API Server');
+      console.log('🚴 TerraGravel API Server v1.1.0');
       console.log('=================================');
       console.log(`Environment: ${config.nodeEnv}`);
       console.log(`Port: ${PORT}`);
       console.log(`URL: http://localhost:${PORT}`);
       console.log(`Health: http://localhost:${PORT}/health`);
+      console.log('=================================');
+      console.log('New Features:');
+      console.log('  - Password Reset');
+      console.log('  - Email Verification');
+      console.log('  - Block/Report Users');
+      console.log('  - User Statistics');
+      console.log('  - User Search');
+      console.log('  - Live Road Reports');
+      console.log('  - Activity Feed');
+      console.log('  - Push Notifications');
+      console.log('  - Admin Dashboard');
       console.log('=================================\n');
     });
   } catch (error) {
