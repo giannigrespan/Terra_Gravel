@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const { hashPassword } = require('../utils/auth');
+const { sendPasswordResetEmail } = require('../services/emailService');
 const crypto = require('crypto');
 
 /**
@@ -50,12 +51,12 @@ const forgotPassword = async (req, res) => {
       [user.id, token, expiresAt]
     );
 
-    // In production, send email here
-    // For now, return token in response (dev only)
-    const resetUrl = `terragravel://reset-password?token=${token}`;
+    // Send password reset email
+    const emailResult = await sendPasswordResetEmail(user.email, token, user.username);
 
-    // TODO: Integrate email service (SendGrid, AWS SES, etc.)
-    console.log(`Password reset requested for ${email}. Token: ${token}`);
+    if (!emailResult.success) {
+      console.warn(`Failed to send password reset email to ${email}:`, emailResult.error);
+    }
 
     res.json({
       success: true,
