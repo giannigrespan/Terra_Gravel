@@ -6,7 +6,7 @@
 ![Build Flutter](https://github.com/YOUR_USERNAME/terragravel/actions/workflows/build-flutter.yml/badge.svg)
 ![CI Pipeline](https://github.com/YOUR_USERNAME/terragravel/actions/workflows/ci.yml/badge.svg)
 
-TerraGravel is a mobile-first social platform for cyclists to connect, organize rides, and share their adventures. Built with Flutter for mobile and Node.js + PostgreSQL for the backend.
+TerraGravel is a mobile-first social platform for cyclists to connect, organize rides, and share their adventures. Built with Flutter for mobile and Node.js + PostgreSQL for the backend
 
 ---
 
