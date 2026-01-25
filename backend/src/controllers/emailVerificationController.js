@@ -1,4 +1,5 @@
 const { query } = require('../config/database');
+const { sendVerificationEmail } = require('../services/emailService');
 const crypto = require('crypto');
 
 /**
@@ -48,11 +49,12 @@ const sendVerification = async (req, res) => {
       [userId, token, expiresAt]
     );
 
-    // In production, send email here
-    const verifyUrl = `terragravel://verify-email?token=${token}`;
+    // Send verification email
+    const emailResult = await sendVerificationEmail(user.email, token, req.user.username);
 
-    // TODO: Integrate email service
-    console.log(`Email verification requested for ${user.email}. Token: ${token}`);
+    if (!emailResult.success) {
+      console.warn(`Failed to send verification email to ${user.email}:`, emailResult.error);
+    }
 
     res.json({
       success: true,
